@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sanremo 2026</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --sanremo-blue: #0a192f;
+            --sanremo-gold: #c5a059;
+            --sanremo-white: #e6f1ff;
+            --card-bg: #112240;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--sanremo-blue);
+            color: var(--sanremo-white);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 { color: var(--sanremo-gold); text-transform: uppercase; letter-spacing: 2px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); margin-bottom: 10px; }
+
+        /* NAVBAR TABS */
+        .navbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 450px;
+        }
+        .nav-btn {
+            flex: 1;
+            padding: 10px;
+            background: var(--card-bg);
+            border: 1px solid var(--sanremo-gold);
+            color: var(--sanremo-gold);
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 6px;
+        }
+        .nav-btn.active {
+            background: var(--sanremo-gold);
+            color: var(--sanremo-blue);
+        }
+
+        .form-container {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--sanremo-gold);
+            width: 100%;
+            max-width: 450px;
+            margin-bottom: 30px;
+        }
+
+        .input-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; color: var(--sanremo-gold); font-weight: bold; font-size: 0.9em; }
+        
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #233554;
+            background: var(--sanremo-blue);
+            color: white;
+            box-sizing: border-box;
+        }
+
+        .grid-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        button.main-btn {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--sanremo-gold);
+            color: var(--sanremo-blue);
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            text-transform: uppercase;
+        }
+
+        .ranking-container {
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .artist-card {
+            background-color: var(--card-bg);
+            margin-bottom: 10px;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 5px solid var(--sanremo-gold);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .info h3 { margin: 0 0 5px 0; color: var(--sanremo-gold); }
+        .details { font-size: 0.85em; color: #8892b0; }
+        
+        .score-box { text-align: center; min-width: 60px; }
+        .total-score { font-size: 1.5em; font-weight: bold; color: var(--sanremo-gold); display: block; }
+
+        .btn-edit {
+            background: none;
+            border: 1px solid var(--sanremo-gold);
+            color: var(--sanremo-gold);
+            padding: 4px 8px;
+            font-size: 0.7em;
+            width: auto;
+            margin-top: 5px;
+            cursor: pointer;
+        }
+
+        .pos-1 { border-left: 8px solid #ffd700; background: linear-gradient(90deg, #112240 0%, #1a365d 100%); }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+    <h1>GIURIA DI CASA</h1>
+
+    <div class="navbar">
+        <button class="nav-btn active" onclick="switchTab('mia')">MIA CLASSIFICA</button>
+        <button class="nav-btn" onclick="switchTab('generale')">GENERALE LIVE</button>
+    </div>
+
+    <div class="form-container" id="form-area">
+        <input type="hidden" id="edit-id">
+        <div class="input-group">
+            <label>NOME ARTISTA / CANZONE</label>
+            <input type="text" id="artist-name" placeholder="Es: Angelina Mango">
+        </div>
+        
+        <div class="grid-inputs">
+            <div class="input-group">
+                <label>VOCE</label>
+                <select id="v-voce"></select>
+            </div>
+            <div class="input-group">
+                <label>INTONAZIONE</label>
+                <select id="v-into"></select>
+            </div>
+            <div class="input-group">
+                <label>SCENA</label>
+                <select id="v-scena"></select>
+            </div>
+            <div class="input-group">
+                <label>INTERPRETAZ.</label>
+                <select id="v-interp"></select>
+            </div>
+        </div>
+        <button class="main-btn" onclick="saveArtist()" id="btn-save">Salva e Sincronizza</button>
+    </div>
+
+    <div class="ranking-container" id="ranking-mia">
+        <h2 style="text-align: center; font-size: 1em; color: var(--sanremo-gold)">I TUOI VOTI</h2>
+        <div id="mia-list"></div>
+    </div>
+
+    <div class="ranking-container hidden" id="ranking-generale">
+        <h2 style="text-align: center; font-size: 1em; color: var(--sanremo-gold)">CLASSIFICA DI GRUPPO (SOMMA)</h2>
+        <div id="generale-list"></div>
+    </div>
+
+    <script>
+        // CONFIGURAZIONE SUPABASE
+        const SB_URL = "https://oinhurifnkhhgsavitnd.supabase.co";
+        const SB_KEY = "sb_publishable_ncBvJo2CVv1chfjGLYVRGQ_sC_tCnjM";
+        const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
+
+        let database = JSON.parse(localStorage.getItem('sanremoVoti')) || [];
+
+        // Popola i selettori 0-10
+        const selects = ['v-voce', 'v-into', 'v-scena', 'v-interp'];
+        selects.forEach(id => {
+            const el = document.getElementById(id);
+            for(let i=0; i<=10; i++) {
+                let opt = document.createElement('option');
+                opt.value = i; opt.innerHTML = i;
+                el.appendChild(opt);
+            }
+        });
+
+        async function saveArtist() {
+            const name = document.getElementById('artist-name').value.trim().toUpperCase();
+            const editId = document.getElementById('edit-id').value;
+            
+            if(!name) return alert("Inserisci il nome!");
+
+            const data = {
+                id: editId || Date.now(),
+                name: name,
+                voce: parseInt(document.getElementById('v-voce').value),
+                into: parseInt(document.getElementById('v-into').value),
+                scena: parseInt(document.getElementById('v-scena').value),
+                interp: parseInt(document.getElementById('v-interp').value)
+            };
+            data.totale = data.voce + data.into + data.scena + data.interp;
+
+            // Salvataggio Locale
+            if(editId) {
+                database = database.map(a => a.id == editId ? data : a);
+            } else {
+                database.push(data);
+            }
+            localStorage.setItem('sanremoVoti', JSON.stringify(database));
+
+            // Salvataggio su Supabase (Sincronizzazione)
+            await supabaseClient.from('voti_sanremo').insert([
+                { artista: data.name, voce: data.voce, intonazione: data.into, scena: data.scena, interpretazione: data.interp, totale: data.totale }
+            ]);
+
+            resetForm();
+            renderMiaClassifica();
+            renderGenerale();
+        }
+
+        function renderMiaClassifica() {
+            const container = document.getElementById('mia-list');
+            container.innerHTML = "";
+            database.sort((a, b) => b.totale - a.totale);
+
+            database.forEach((a, index) => {
+                container.innerHTML += `
+                    <div class="artist-card ${index === 0 ? 'pos-1' : ''}">
+                        <div class="info">
+                            <h3>${index + 1}. ${a.name}</h3>
+                            <div class="details">V:${a.voce} I:${a.into} S:${a.scena} Int:${a.interp}</div>
+                            <button class="btn-edit" onclick="editArtist(${a.id})">MODIFICA</button>
+                        </div>
+                        <div class="score-box">
+                            <span class="total-score">${a.totale}</span>
+                            <small>Punti</small>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        async function renderGenerale() {
+            const { data, error } = await supabaseClient.from('voti_sanremo').select('*');
+            if(error) return;
+
+            const report = {};
+            data.forEach(v => {
+                const n = v.artista.toUpperCase();
+                if(!report[n]) report[n] = 0;
+                report[n] += v.totale;
+            });
+
+            const sorted = Object.entries(report).sort((a,b) => b[1] - a[1]);
+            const container = document.getElementById('generale-list');
+            container.innerHTML = "";
+
+            sorted.forEach(([name, total], i) => {
+                container.innerHTML += `
+                    <div class="artist-card ${i === 0 ? 'pos-1' : ''}">
+                        <div class="info"><h3>${i + 1}. ${name}</h3><small>Voti totali collettivi</small></div>
+                        <div class="score-box"><span class="total-score">${total}</span></div>
+                    </div>`;
+            });
+        }
+
+        function editArtist(id) {
+            const a = database.find(art => art.id == id);
+            document.getElementById('artist-name').value = a.name;
+            document.getElementById('v-voce').value = a.voce;
+            document.getElementById('v-into').value = a.into;
+            document.getElementById('v-scena').value = a.scena;
+            document.getElementById('v-interp').value = a.interp;
+            document.getElementById('edit-id').value = a.id;
+            document.getElementById('btn-save').innerHTML = "Aggiorna Voto";
+            window.scrollTo(0,0);
+        }
+
+        function resetForm() {
+            document.getElementById('artist-name').value = "";
+            document.getElementById('edit-id').value = "";
+            document.getElementById('btn-save').innerHTML = "Salva e Sincronizza";
+            selects.forEach(id => document.getElementById(id).value = 0);
+        }
+
+        function switchTab(type) {
+            const btns = document.querySelectorAll('.nav-btn');
+            btns.forEach(b => b.classList.remove('active'));
+            if(type === 'mia') {
+                document.getElementById('ranking-mia').classList.remove('hidden');
+                document.getElementById('ranking-generale').classList.add('hidden');
+                btns[0].classList.add('active');
+            } else {
+                document.getElementById('ranking-mia').classList.add('hidden');
+                document.getElementById('ranking-generale').classList.remove('hidden');
+                btns[1].classList.add('active');
+                renderGenerale();
+            }
+        }
+
+        renderMiaClassifica();
+    </script>
+</body>
+</html>
