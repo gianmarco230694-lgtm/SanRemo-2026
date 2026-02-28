@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sanremo 2026</title>
+    <title>Sanremo 2026 - Giuria di Casa</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
@@ -26,7 +26,6 @@
 
         h1 { color: var(--sanremo-gold); text-transform: uppercase; letter-spacing: 2px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); margin-bottom: 10px; }
 
-        /* NAVBAR TABS */
         .navbar {
             display: flex;
             gap: 10px;
@@ -108,7 +107,7 @@
         }
 
         .info h3 { margin: 0 0 5px 0; color: var(--sanremo-gold); }
-        .details { font-size: 0.85em; color: #8892b0; }
+        .details { font-size: 0.8em; color: #8892b0; line-height: 1.4; }
         
         .score-box { text-align: center; min-width: 60px; }
         .total-score { font-size: 1.5em; font-weight: bold; color: var(--sanremo-gold); display: block; }
@@ -120,12 +119,26 @@
             padding: 4px 8px;
             font-size: 0.7em;
             width: auto;
-            margin-top: 5px;
+            margin-top: 8px;
             cursor: pointer;
         }
 
         .pos-1 { border-left: 8px solid #ffd700; background: linear-gradient(90deg, #112240 0%, #1a365d 100%); }
         .hidden { display: none; }
+        
+        .btn-reset-global {
+            width: 100%;
+            max-width: 450px;
+            margin-top: 30px;
+            padding: 12px;
+            background: transparent;
+            border: 1px solid #ff4444;
+            color: #ff4444;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-bottom: 50px;
+        }
     </style>
 </head>
 <body>
@@ -168,6 +181,7 @@
     <div class="ranking-container" id="ranking-mia">
         <h2 style="text-align: center; font-size: 1em; color: var(--sanremo-gold)">I TUOI VOTI</h2>
         <div id="mia-list"></div>
+        <button class="btn-reset-global" onclick="resettatutto()">🗑️ SVUOTA TUTTA LA MIA CLASSIFICA</button>
     </div>
 
     <div class="ranking-container hidden" id="ranking-generale">
@@ -176,14 +190,12 @@
     </div>
 
     <script>
-        // CONFIGURAZIONE SUPABASE
         const SB_URL = "https://oinhurifnkhhgsavitnd.supabase.co";
         const SB_KEY = "sb_publishable_ncBvJo2CVv1chfjGLYVRGQ_sC_tCnjM";
         const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
 
         let database = JSON.parse(localStorage.getItem('sanremoVoti')) || [];
 
-        // Popola i selettori 0-10
         const selects = ['v-voce', 'v-into', 'v-scena', 'v-interp'];
         selects.forEach(id => {
             const el = document.getElementById(id);
@@ -210,7 +222,6 @@
             };
             data.totale = data.voce + data.into + data.scena + data.interp;
 
-            // Salvataggio Locale
             if(editId) {
                 database = database.map(a => a.id == editId ? data : a);
             } else {
@@ -218,7 +229,6 @@
             }
             localStorage.setItem('sanremoVoti', JSON.stringify(database));
 
-            // Salvataggio su Supabase (Sincronizzazione)
             await supabaseClient.from('voti_sanremo').insert([
                 { artista: data.name, voce: data.voce, intonazione: data.into, scena: data.scena, interpretazione: data.interp, totale: data.totale }
             ]);
@@ -228,6 +238,7 @@
             renderGenerale();
         }
 
+        // FUNZIONE AGGIORNATA: Parametri per esteso e Cestino
         function renderMiaClassifica() {
             const container = document.getElementById('mia-list');
             container.innerHTML = "";
@@ -238,8 +249,14 @@
                     <div class="artist-card ${index === 0 ? 'pos-1' : ''}">
                         <div class="info">
                             <h3>${index + 1}. ${a.name}</h3>
-                            <div class="details">V:${a.voce} I:${a.into} S:${a.scena} Int:${a.interp}</div>
-                            <button class="btn-edit" onclick="editArtist(${a.id})">MODIFICA</button>
+                            <div class="details">
+                                Voce: ${a.voce} | Intonazione: ${a.into}<br>
+                                Scena: ${a.scena} | Interpretazione: ${a.interp}
+                            </div>
+                            <div style="display: flex; gap: 12px; align-items: center;">
+                                <button class="btn-edit" onclick="editArtist(${a.id})">MODIFICA</button>
+                                <button onclick="eliminaArtista(${a.id})" title="Elimina" style="background:none; border:none; cursor:pointer; font-size:1.2em; padding:0; margin-top:8px;">🗑️</button>
+                            </div>
                         </div>
                         <div class="score-box">
                             <span class="total-score">${a.totale}</span>
@@ -285,6 +302,22 @@
             window.scrollTo(0,0);
         }
 
+        function eliminaArtista(id) {
+            if (confirm("Vuoi eliminare questo artista dai tuoi voti?")) {
+                database = database.filter(a => a.id != id);
+                localStorage.setItem('sanremoVoti', JSON.stringify(database));
+                renderMiaClassifica();
+            }
+        }
+
+        function resettatutto() {
+            if (confirm("ATTENZIONE: Vuoi cancellare tutti i TUOI voti e ricominciare?")) {
+                database = [];
+                localStorage.removeItem('sanremoVoti');
+                renderMiaClassifica();
+            }
+        }
+
         function resetForm() {
             document.getElementById('artist-name').value = "";
             document.getElementById('edit-id').value = "";
@@ -310,3 +343,4 @@
         renderMiaClassifica();
     </script>
 </body>
+</html>
