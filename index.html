@@ -126,7 +126,7 @@
         .pos-1 { border-left: 8px solid #ffd700; background: linear-gradient(90deg, #112240 0%, #1a365d 100%); }
         .hidden { display: none; }
         
-        .btn-reset-global {
+        .btn-reset-red {
             width: 100%;
             max-width: 450px;
             margin-top: 30px;
@@ -138,6 +138,7 @@
             cursor: pointer;
             font-weight: bold;
             margin-bottom: 50px;
+            text-transform: uppercase;
         }
     </style>
 </head>
@@ -181,12 +182,13 @@
     <div class="ranking-container" id="ranking-mia">
         <h2 style="text-align: center; font-size: 1em; color: var(--sanremo-gold)">I TUOI VOTI</h2>
         <div id="mia-list"></div>
-        <button class="btn-reset-global" onclick="resettatutto()">🗑️ SVUOTA TUTTA LA MIA CLASSIFICA</button>
+        <button class="btn-reset-red" onclick="resettatutto()">🗑️ SVUOTA TUTTA LA MIA CLASSIFICA</button>
     </div>
 
     <div class="ranking-container hidden" id="ranking-generale">
         <h2 style="text-align: center; font-size: 1em; color: var(--sanremo-gold)">CLASSIFICA DI GRUPPO (SOMMA)</h2>
         <div id="generale-list"></div>
+        <button class="btn-reset-red" onclick="resetSupaBaseGlobale()">⚠️ AZZERA CLASSIFICA GENERALE (CLOUD)</button>
     </div>
 
     <script>
@@ -238,7 +240,6 @@
             renderGenerale();
         }
 
-        // FUNZIONE AGGIORNATA: Parametri per esteso e Cestino
         function renderMiaClassifica() {
             const container = document.getElementById('mia-list');
             container.innerHTML = "";
@@ -315,6 +316,23 @@
                 database = [];
                 localStorage.removeItem('sanremoVoti');
                 renderMiaClassifica();
+            }
+        }
+
+        // NUOVA FUNZIONE: Resetta tutto il database GLOBALE online (Supabase)
+        async function resetSupaBaseGlobale() {
+            if (confirm("ATTENZIONE! Questo cancellerà i voti di TUTTI gli utenti online. Sei sicura?")) {
+                const { error } = await supabaseClient
+                    .from('voti_sanremo')
+                    .delete()
+                    .neq('id', 0);
+
+                if (error) {
+                    alert("Errore nel reset globale: " + error.message);
+                } else {
+                    alert("Classifica Globale azzerata!");
+                    renderGenerale();
+                }
             }
         }
 
