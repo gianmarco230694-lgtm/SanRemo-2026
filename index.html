@@ -319,13 +319,13 @@
             }
         }
 
-        // NUOVA FUNZIONE: Resetta tutto il database GLOBALE online (Supabase)
+        // FUNZIONE CORRETTA: Ora svuota Supabase senza errore UUID
         async function resetSupaBaseGlobale() {
             if (confirm("ATTENZIONE! Questo cancellerà i voti di TUTTI gli utenti online. Sei sicura?")) {
                 const { error } = await supabaseClient
                     .from('voti_sanremo')
                     .delete()
-                    .neq('id', 0);
+                    .not('artista', 'is', null); // Filtro universale che non usa ID numerici
 
                 if (error) {
                     alert("Errore nel reset globale: " + error.message);
