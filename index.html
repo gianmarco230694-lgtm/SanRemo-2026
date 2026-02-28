@@ -133,7 +133,7 @@
     <h1>GIURIA DI CASA</h1>
 
     <div class="navbar">
-        <button class="nav-btn active" onclick="switchTab('mia')">CLASSIFICA PERSONALE</button>
+        <button class="nav-btn active" onclick="switchTab('mia')">MIA CLASSIFICA</button>
         <button class="nav-btn" onclick="switchTab('generale')">GENERALE LIVE</button>
     </div>
 
@@ -171,7 +171,7 @@
     </div>
 
     <div class="ranking-container hidden" id="ranking-generale">
-        <h2 style="text-align: center; font-size: 1em; color: var(--sanremo-gold)">CLASSIFICA DI GRUPPO</h2>
+        <h2 style="text-align: center; font-size: 1em; color: var(--sanremo-gold)">CLASSIFICA DI GRUPPO (SOMMA)</h2>
         <div id="generale-list"></div>
     </div>
 
@@ -273,23 +273,6 @@
             });
         }
 
-        async function resetTabella() {
-    const conferma = confirm("ATTENZIONE: Vuoi davvero cancellare TUTTI i voti della classifica generale?");
-    if (conferma) {
-        const { error } = await supabaseClient
-            .from('voti_sanremo')
-            .delete()
-            .neq('artista', '0'); // Trucco per dire "cancella tutto"
-
-        if (error) {
-            alert("Errore nel reset: " + error.message);
-        } else {
-            alert("Classifica svuotata con successo!");
-            location.reload(); // Ricarica la pagina per pulire tutto
-        }
-    }
-}
-
         function editArtist(id) {
             const a = database.find(art => art.id == id);
             document.getElementById('artist-name').value = a.name;
@@ -327,4 +310,3 @@
         renderMiaClassifica();
     </script>
 </body>
-</html>
