@@ -196,6 +196,13 @@
         const SB_KEY = "sb_publishable_ncBvJo2CVv1chfjGLYVRGQ_sC_tCnjM";
         const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
 
+        // 1. GENERAZIONE ID UTENTE UNICO (Opzione A)
+        let userId = localStorage.getItem('sanremo_userId');
+        if (!userId) {
+            userId = 'user_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('sanremo_userId', userId);
+        }
+
         let database = JSON.parse(localStorage.getItem('sanremoVoti')) || [];
 
         const selects = ['v-voce', 'v-into', 'v-scena', 'v-interp'];
@@ -224,6 +231,7 @@
             };
             data.totale = data.voce + data.into + data.scena + data.interp;
 
+            // Salvataggio Locale
             if(editId) {
                 database = database.map(a => a.id == editId ? data : a);
             } else {
@@ -231,9 +239,21 @@
             }
             localStorage.setItem('sanremoVoti', JSON.stringify(database));
 
-            await supabaseClient.from('voti_sanremo').insert([
-                { artista: data.name, voce: data.voce, intonazione: data.into, scena: data.scena, interpretazione: data.interp, totale: data.totale }
-            ]);
+            // 2. SALVATAGGIO CLOUD CON UPSERT (Opzione A)
+            // Usiamo il nome artista e l'id utente per decidere se aggiornare o inserire
+            const { error } = await supabaseClient.from('voti_sanremo').upsert([
+                { 
+                    user_id: userId, // Identifica chi vota
+                    artista: data.name, 
+                    voce: data.voce, 
+                    intonazione: data.into, 
+                    scena: data.scena, 
+                    interpretazione: data.interp, 
+                    totale: data.totale 
+                }
+            ], { onConflict: 'user_id, artista' }); // Fondamentale: non sommare se utente e artista sono uguali
+
+            if(error) console.error("Errore Sync:", error.message);
 
             resetForm();
             renderMiaClassifica();
@@ -308,6 +328,8 @@
                 database = database.filter(a => a.id != id);
                 localStorage.setItem('sanremoVoti', JSON.stringify(database));
                 renderMiaClassifica();
+                // Nota: In un sistema completo dovresti eliminare anche da Supabase, 
+                // ma per ora lo togliamo dalla tua vista locale.
             }
         }
 
@@ -319,13 +341,12 @@
             }
         }
 
-        // FUNZIONE CORRETTA: Ora svuota Supabase senza errore UUID
         async function resetSupaBaseGlobale() {
             if (confirm("ATTENZIONE! Questo cancellerà i voti di TUTTI gli utenti online. Sei sicura?")) {
                 const { error } = await supabaseClient
                     .from('voti_sanremo')
                     .delete()
-                    .not('artista', 'is', null); // Filtro universale che non usa ID numerici
+                    .not('artista', 'is', null);
 
                 if (error) {
                     alert("Errore nel reset globale: " + error.message);
